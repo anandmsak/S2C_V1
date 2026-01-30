@@ -1,48 +1,44 @@
 import cv2
 import os
-import networkx as nx
 from src.preprocess import extract_skeleton
 from src.graph import skeleton_to_graph
-from src.segment import segment_graph
 
 # Configuration
-IMAGE_PATH = "data/raw/input.png"
+IMAGE_PATH = "data/raw/c2.jpeg"
+
 
 def run_s2c_pipeline():
-    print("="*40)
+    print("=" * 40)
     print("🔵 S2C: STARTING CIRCUIT RECONSTRUCTION")
-    print("="*40)
+    print("=" * 40)
 
-    # Step 1: Image Processing
+    # Step 1: Preprocessing
     print("[1/3] Preprocessing image...")
-    skeleton = extract_skeleton(IMAGE_PATH)
-    
-    # Step 2: Graph Extraction
-    print("[2/3] Building circuit graph...")
-    G = skeleton_to_graph(skeleton)
-    
-    # Step 3: Segmentation (Wires vs Components)
-    print("[3/3] Segmenting wires and components...")
-    wire_graph, comp_graph = segment_graph(G)
-   
-    from src.segment import extract_component_images
-    component_files = extract_component_images(comp_graph)
-    print(f"✅ Extracted {len(component_files)} symbols stored ")
-   
-    # Output Stats
-    print("\n" + "-"*20)
-    print(f"📊 GRAPH RESULTS:")
-    print(f"Total Nodes: {G.number_of_nodes()}")
-    print(f"Total Edges: {G.number_of_edges()}")
-    print(f"Wire Segments: {wire_graph.number_of_edges()}")
-    print(f"Component Segments: {comp_graph.number_of_edges()}")
-    print("-"*20)
+    wire_skel, components = extract_skeleton(IMAGE_PATH)
 
-    # Visualization
-    cv2.imshow("Final Circuit Skeleton", skeleton)
-    print("\n👉 Click the image and press any key to close.")
+    # ---- DEBUG VISUALIZATION (MANDATORY FOR NOW) ----
+    img = cv2.imread(IMAGE_PATH)
+    for c in components:
+        x, y, w, h = c["bbox"]
+        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+
+    cv2.imshow("Detected Components", img)
+    cv2.imshow("Wire Skeleton", wire_skel)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    # ------------------------------------------------
+
+    # Step 2: Graph Extraction (WIRES ONLY)
+    print("[2/3] Building circuit graph...")
+    G = skeleton_to_graph(wire_skel)
+
+    # Output Stats
+    print("\n" + "-" * 20)
+    print("📊 GRAPH RESULTS:")
+    print(f"Total Nodes: {G.number_of_nodes()}")
+    print(f"Total Edges: {G.number_of_edges()}")
+    print("-" * 20)
+
 
 if __name__ == "__main__":
     if not os.path.exists(IMAGE_PATH):
